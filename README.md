@@ -35,7 +35,7 @@
 
 ## 💡 What Is This?
 
-**Visualization Agent** is a FastAPI microservice (part of the [GEMRSLIZE](https://github.com) multi-agent data analysis platform) that:
+**Visualization Agent** is a FastAPI microservice (part of the (https://github.com) multi-agent data analysis platform) that:
 
 1. **Receives** a small aggregated dataset (columns + rows)
 2. **Analyzes** the data using a dual recommendation system:
