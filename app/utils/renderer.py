@@ -14,15 +14,9 @@ import uuid
 from pathlib import Path
 
 from app.config import settings
+from app.utils.storage import storage
 
 logger = logging.getLogger("viz-agent")
-
-
-def _ensure_output_dir() -> Path:
-    """Create the chart output directory if it doesn't exist."""
-    out = Path(settings.CHART_OUTPUT_PATH)
-    out.mkdir(parents=True, exist_ok=True)
-    return out
 
 
 async def render_png(
@@ -46,15 +40,13 @@ async def render_png(
         fig = go.Figure(spec)
         img_bytes: bytes = pio.to_image(fig, format="png", width=width, height=height)
 
-        # Save to disk with UUID filename
-        out_dir = _ensure_output_dir()
+        # Save to Storage
         filename = f"{uuid.uuid4().hex}.png"
-        filepath = out_dir / filename
-        filepath.write_bytes(img_bytes)
+        filepath = storage.save_chart(img_bytes, filename)
 
         b64 = base64.b64encode(img_bytes).decode("ascii")
         logger.info("PNG saved -> %s (%d bytes)", filepath, len(img_bytes))
-        return b64, str(filepath)
+        return b64, filepath
 
     try:
         return await loop.run_in_executor(None, _sync_render)

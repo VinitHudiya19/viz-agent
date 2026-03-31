@@ -13,3 +13,4 @@ langchain-core
 langchain-groq
 langchain-openai
 langchain-community
+azure-storage-blob

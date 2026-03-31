@@ -138,14 +138,25 @@ def _columns_to_dicts(columns: list[ColumnProfile]) -> list[dict]:
 @app.get("/health", tags=["Health"])
 def health():
     """Service health check."""
+    provider = str(getattr(settings, "LLM_PROVIDER", "unknown"))
+    model = ""
+    if provider == "azure_openai":
+        model = getattr(settings, "AZURE_OPENAI_DEPLOYMENT_NAME", "")
+    elif provider == "groq":
+        model = getattr(settings, "GROQ_MODEL", "")
+    elif provider == "openai":
+        model = "gpt-4o"
+    elif provider == "ollama":
+        model = getattr(settings, "OLLAMA_MODEL", "")
+    
     return {
         "status": "ok",
         "agent": "viz-agent",
         "version": "2.0.0",
-        "provider": "grok" if getattr(settings, "XAI_API_KEY", "") else "groq",
-        "model": "grok-2-latest" if getattr(settings, "XAI_API_KEY", "") else settings.GROQ_MODEL,
-        "port": settings.PORT,
-        "storage": settings.STORAGE_TYPE,
+        "provider": provider,
+        "model": model,
+        "port": getattr(settings, "PORT", 8003),
+        "storage": getattr(settings, "STORAGE_TYPE", "local"),
         "color_schemes": SCHEME_NAMES,
         "chart_types": ["bar", "line", "scatter", "pie", "histogram", "heatmap", "box", "treemap", "waterfall", "area"],
     }
@@ -237,6 +248,67 @@ async def generate_dashboard(req: DashboardRequest):
         "chart_count": len(results),
         "charts": [{"chart_type": r["chart_type"], "task": r["task"]} for r in results],
     }
+
+
+@app.post("/run", tags=["Orchestrator"])
+async def run_task(payload: dict):
+    """Orchestrator pipeline integration endpoint. Extracts tabular data from upstream context and generates a chart."""
+    task_description = payload.get("task_description") or payload.get("query") or "Auto chart"
+    context = payload.get("_context", {})
+    
+    data_rows = None
+    column_names = None
+    
+    # Locate dataset inside context dependencies
+    for dep_id, dep_data in context.items():
+        if isinstance(dep_data, dict) and "data_preview" in dep_data:
+            data_rows = dep_data["data_preview"]
+            column_names = dep_data.get("columns", [])
+            break
+            
+    if data_rows is None:
+        raise HTTPException(status_code=400, detail="No tabular data found in _context (data_preview missing). Cannot visualize empty data.")
+        
+    col_profiles = []
+    if data_rows:
+        if column_names:
+            for col in column_names:
+                name = col if isinstance(col, str) else col.get("name", "unknown")
+                sample_val = data_rows[0].get(name) if data_rows else None
+                semantic = "categorical"
+                unique_cnt = None
+                
+                if isinstance(sample_val, (int, float)):
+                    semantic = "numeric"
+                elif isinstance(sample_val, str) and ("date" in name.lower() or "time" in name.lower()):
+                    semantic = "datetime"
+                else:
+                    unique_cnt = len(set(str(r.get(name)) for r in data_rows if r.get(name) is not None))
+                    
+                col_profiles.append(ColumnProfile(name=name, semantic=semantic, unique=unique_cnt))
+        else:
+            for key, val in data_rows[0].items():
+                semantic = "numeric" if isinstance(val, (int, float)) else "categorical"
+                unique_cnt = len(set(str(r.get(key)) for r in data_rows if r.get(key) is not None)) if semantic == "categorical" else None
+                col_profiles.append(ColumnProfile(name=key, semantic=semantic, unique=unique_cnt))
+    else:
+        # Empty dataframe workaround
+        if column_names:
+            for col in column_names:
+                name = col if isinstance(col, str) else col.get("name", "unknown")
+                col_profiles.append(ColumnProfile(name=name, semantic="categorical"))
+                
+    chart_req = ChartRequest(
+        task=task_description,
+        data=DataPayload(columns=col_profiles, rows=data_rows),
+        color_scheme="vibrant",
+        render_png=True,
+        width=1000,
+        height=600
+    )
+    
+    result = await generate_chart(chart_req)
+    return result
 
 
 @app.post("/auto-insights", tags=["Auto Insights"])

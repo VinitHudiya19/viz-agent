@@ -27,15 +27,23 @@ def setup_logging() -> logging.Logger:
 # ── Settings ──────────────────────────────────────────────────────────────────
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(env_file=".env.local", env_file_encoding="utf-8", extra="ignore")
 
-    LLM_PROVIDER: Literal["ollama", "openai", "anthropic", "groq", "grok"] = "ollama"
-    GROQ_API_KEY: str = "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"
+    LLM_PROVIDER: Literal["ollama", "openai", "anthropic", "groq", "grok", "azure_openai"] = "azure_openai"
+    GROQ_API_KEY: str = ""
     XAI_API_KEY: str = ""
-    GROQ_MODEL: str = "llama-3.1-8b-instant"
+    GROQ_MODEL: str = ""
     OLLAMA_MODEL: str = ""
     OLLAMA_BASE_URL: str = ""
-    STORAGE_TYPE: Literal["local"] = "local"
+    OPENAI_API_KEY: str = ""
+    # Azure OpenAI
+    AZURE_OPENAI_API_KEY: str = ""
+    AZURE_OPENAI_ENDPOINT: str = ""
+    AZURE_OPENAI_DEPLOYMENT_NAME: str = ""
+    AZURE_OPENAI_API_VERSION: str = "2024-02-15-preview"
+    STORAGE_TYPE: Literal["local", "azure_blob"] = "local"
+    AZURE_STORAGE_CONNECTION_STRING: str = ""
+    AZURE_STORAGE_CONTAINER_NAME: str = "charts"
     CHART_OUTPUT_PATH: str = "./charts"
     MAX_DATA_ROWS: int = 1000
     PORT: int = 8003

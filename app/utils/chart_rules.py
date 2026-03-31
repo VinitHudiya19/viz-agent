@@ -28,7 +28,7 @@ def _get_names_by_type(columns: list[dict], sem_type: str) -> list[str]:
 
 def _max_cardinality(columns: list[dict], sem_type: str = "categorical") -> int:
     return max(
-        (c.get("unique", 0) for c in columns if c.get("semantic") == sem_type),
+        ((c.get("unique") or 0) for c in columns if c.get("semantic") == sem_type),
         default=0,
     )
 

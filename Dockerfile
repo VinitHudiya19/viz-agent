@@ -17,9 +17,10 @@ COPY app/ ./app/
 
 RUN mkdir -p /app/charts
 
-EXPOSE 8003
+ENV PORT=8003
+EXPOSE ${PORT}
 
 HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
-  CMD curl -f http://localhost:8003/health || exit 1
+  CMD curl -f http://localhost:${PORT}/health || exit 1
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8003"]
+CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT}

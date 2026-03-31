@@ -18,7 +18,7 @@ from typing import Optional
 from fastapi import HTTPException
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_groq import ChatGroq
-from langchain_openai import ChatOpenAI
+from langchain_openai import ChatOpenAI, AzureChatOpenAI
 from langchain_community.chat_models import ChatOllama
 
 from app.config import settings
@@ -41,9 +41,23 @@ def _get_llm(temperature=0.15):
     elif provider == "grok":
         logger.info("Viz Agent LLM: Grok (LangChain)")
         return ChatOpenAI(api_key=settings.XAI_API_KEY, base_url="https://api.x.ai/v1", model="grok-2-latest", temperature=temperature)
-    elif provider == "mcp":
-        logger.info("Viz Agent LLM: MCP")
-        return ChatOpenAI(api_key=getattr(settings, "OPENAI_API_KEY", ""), model_name="gpt-4o", temperature=temperature)
+    elif provider == "azure_openai":
+        logger.info("Viz Agent LLM: Azure OpenAI (LangChain)")
+        return AzureChatOpenAI(
+            api_key=settings.AZURE_OPENAI_API_KEY,
+            azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
+            azure_deployment=settings.AZURE_OPENAI_DEPLOYMENT_NAME,
+            api_version=settings.AZURE_OPENAI_API_VERSION,
+            temperature=temperature
+        )
+    elif provider == "openai":
+        logger.info("Viz Agent LLM: OpenAI (LangChain)")
+        return ChatOpenAI(
+            api_key=settings.OPENAI_API_KEY,
+            model="gpt-4o",
+            temperature=temperature
+        )
+
     else:
         logger.info("Viz Agent LLM: Ollama (LangChain)")
         return ChatOllama(base_url=settings.OLLAMA_BASE_URL, model=settings.OLLAMA_MODEL, temperature=temperature)
